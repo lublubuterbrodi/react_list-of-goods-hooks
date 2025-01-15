@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import 'bulma/css/bulma.css';
 import './App.scss';
 
@@ -15,84 +15,86 @@ export const goodsFromServer: string[] = [
   'Garlic',
 ];
 
+enum SortType {
+  Default = 'default',
+  Alphabetical = 'alphabetical',
+  ByLength = 'byLength',
+}
+
 export const App: React.FC = () => {
   const [goods, setGoods] = useState<string[]>([...goodsFromServer]);
-  const [isAlphabetical, setIsAlphabetical] = useState<boolean>(false);
-  const [isByLength, setIsByLength] = useState<boolean>(false);
+  const [sortType, setSortType] = useState<SortType>(SortType.Default);
   const [isReversed, setIsReversed] = useState<boolean>(false);
 
-  const reverseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const applySortAndReverse = (
+    list: string[],
+    type: SortType,
+    reversed: boolean,
+  ): string[] => {
+    const sortedGoods = [...list];
 
-  const sortAlphabetically = (): void => {
-    const sortedGoods = [...goodsFromServer].sort();
-
-    setGoods(isReversed ? sortedGoods.reverse() : sortedGoods);
-    setIsAlphabetical(true);
-    setIsByLength(false);
-    setIsReversed(false);
-  };
-
-  const sortByLength = (): void => {
-    const sortedGoods = [...goodsFromServer].sort(
-      (a, b) => a.length - b.length,
-    );
-
-    setGoods(isReversed ? sortedGoods.reverse() : sortedGoods);
-    setIsByLength(true);
-    setIsAlphabetical(false);
-    setIsReversed(false);
-  };
-
-  const reverseGoods = (): void => {
-    setGoods(prevGoods => [...prevGoods].reverse());
-    setIsReversed(!isReversed);
-
-    if (reverseButtonRef.current) {
-      if (isReversed) {
-        reverseButtonRef.current.classList.add('is-light');
-      } else {
-        reverseButtonRef.current.classList.remove('is-light');
-      }
+    if (type === SortType.Alphabetical) {
+      sortedGoods.sort();
+    } else if (type === SortType.ByLength) {
+      sortedGoods.sort((a, b) => a.length - b.length);
     }
+
+    return reversed ? sortedGoods.reverse() : sortedGoods;
   };
 
-  const resetGoods = (): void => {
+  const handleSort = (type: SortType): void => {
+    setSortType(type);
+    const sortedGoods = applySortAndReverse(goodsFromServer, type, isReversed);
+
+    setGoods(sortedGoods);
+  };
+
+  const handleReverse = (): void => {
+    setIsReversed(prevReversed => {
+      const newReversed = !prevReversed;
+      const reversedGoods = applySortAndReverse(
+        goodsFromServer,
+        sortType,
+        newReversed,
+      );
+
+      setGoods(reversedGoods);
+
+      return newReversed;
+    });
+  };
+
+  const handleReset = (): void => {
     setGoods([...goodsFromServer]);
-    setIsAlphabetical(false);
-    setIsByLength(false);
+    setSortType(SortType.Default);
     setIsReversed(false);
-
-    if (reverseButtonRef.current) {
-      reverseButtonRef.current.classList.add('is-light');
-    }
   };
 
-  const isDefaultOrder = goods.join('') === goodsFromServer.join('');
+  const isDefaultOrder = sortType === SortType.Default && !isReversed;
 
   return (
     <div className="section content">
       <div className="buttons">
         <button
           type="button"
-          className={`button is-info ${isAlphabetical ? '' : 'is-light'}`}
-          onClick={sortAlphabetically}
+          className={`button is-info ${sortType === SortType.Alphabetical ? '' : 'is-light'}`}
+          onClick={() => handleSort(SortType.Alphabetical)}
         >
           Sort alphabetically
         </button>
 
         <button
           type="button"
-          className={`button is-success ${isByLength ? '' : 'is-light'}`}
-          onClick={sortByLength}
+          className={`button is-success ${sortType === SortType.ByLength ? '' : 'is-light'}`}
+          onClick={() => handleSort(SortType.ByLength)}
         >
           Sort by length
         </button>
 
         <button
           type="button"
-          ref={reverseButtonRef}
-          className="button is-warning is-light"
-          onClick={reverseGoods}
+          className={`button is-warning ${isReversed ? '' : 'is-light'}`}
+          onClick={handleReverse}
         >
           Reverse
         </button>
@@ -101,7 +103,7 @@ export const App: React.FC = () => {
           <button
             type="button"
             className="button is-danger"
-            onClick={resetGoods}
+            onClick={handleReset}
           >
             Reset
           </button>
